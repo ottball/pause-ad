@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pause Ads: Sample 1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href='//cdn.theoplayer.com/dash/theoplayer/ui.css'>
+    <style>
+        html, body {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+        .theoplayer-container {
+            width: 100%;
+            height: 100%;
+        }
+        .cooldown {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            -webkit-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            text-align: center;
+            display: none;
+            padding: 10px;
+            background: rgba(1,1,1,0.8);
+            border-radius: 10px 10px;
+        }
+        .cooldown u {
+            cursor: pointer;
+        }
+        .cooldown u:hover:after {
+            content: ' 😢';
+        }
+        .theo-ad-remaining-container {
+            display: none !important;
+        }
+        .theo-ad-playing .vjs-play-control {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="theoplayer-container video-js theoplayer-skin">
+    <div class="cooldown">Taking a break? 🍹<br />Enjoy an ad in <strong>5s</strong>, unless you <u>do not want</u> to learn more about our sponsors who keep us afloat.</div>
+</div>
+
+<script type='text/javascript' src='//cdn.theoplayer.com/dash/theoplayer/THEOplayer.js'></script>
+
+<script>
+
+    var element = document.querySelector('.theoplayer-container');
+    var player = new THEOplayer.Player(element, {
+        libraryLocation: '//cdn.theoplayer.com/dash/theoplayer/',
+        ui: {
+            width: '100%',
+            height: '100%'
+        }
+    });
+
+    /**
+     * Apologies for the poor quality code, but time's money.
+     * Wanna help out? Contact https://www.linkedin.com/in/thijsl/.
+     */
+
+    function scheduleAd() {
+        player.ads.schedule(
+            {
+                "sources": "//cdn.theoplayer.com/demos/preroll.xml",
+                "skipOffset": "00:00:00"
+            }
+        );
+        player.play();
+    }
+
+    var interval;
+    var countdownStarted = false;
+    var adSkipped = false;
+
+    player.addEventListener('pause', function() {
+        console.log("Pause event detected...");
+        if (!countdownStarted) {
+            console.log("Starting countdown!")
+            countdownStarted = true;
+            adSkipped = false;
+            showCountdown();
+        } else {
+            console.log("Oh, there's already an active countdown/ad?");
+        }
+    });
+
+    player.ads.addEventListener('adskip', function() {
+        adSkipped = true;
+    });
+
+    player.ads.addEventListener('adend', function() {
+        console.log("End of the current ad break...");
+        if (!adSkipped) {
+            console.log("and you haven't skipped this ad, so we'll schedule another one.");
+            scheduleAd();
+        } else {
+            console.log("and you have skipped this ad, so we'll resume playback.");
+            countdownStarted = false;
+        }
+    });
+
+    function showCountdown() {
+        var cooldownDiv = document.querySelector('.cooldown strong');
+        cooldownDiv.parentNode.style.display = "block";
+        var seconds = 10;
+        cooldownDiv.innerText = seconds+"s";
+        interval = setInterval(function() {
+            seconds = seconds - 1;
+            cooldownDiv.innerText = seconds+"s";
+            if (seconds == 0) {
+                cooldownDiv.parentNode.style.display = "none";
+                cooldownDiv.innerText = "";
+                clearInterval(interval);
+                scheduleAd()
+            }
+        }, 1000);
+    }
+
+    function cancelAdListener() {
+        var adCancel = document.querySelector('.cooldown u');
+        adCancel.addEventListener('click', function() {
+            console.log("Countdown cancelled. I guess you prefer SVOD?");
+            adCancel.parentNode.style.display = "none";
+            clearInterval(interval);
+            countdownStarted = false;
+        })
+    }
+    cancelAdListener();
+
+
+    player.source = {
+        "sources": [
+            {
+                "src": "//cdn.theoplayer.com/video/big_buck_bunny/big_buck_bunny_metadata.m3u8",
+                "type": "application/x-mpegurl"
+            }
+        ]
+    };
+
+</script>
+
+</body>
+</html>
